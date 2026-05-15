@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocNavigator</title>
+<style>
+  /* ---------- design tokens ---------- */
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f3f1ec;
+    --ink: #1f2933;
+    --ink-2: #4a5560;
+    --ink-faint: #8a93a0;
+    --rule: #e3e0d8;
+    --rule-soft: #ede9e0;
+    --accent: #3d6b7a;
+    --accent-bg: #eaf1f3;
+    --accent-strong: #2c5160;
+    --warn: #a85a2c;
+    --warn-bg: #f7eee5;
+    --good: #5a7a4f;
+    --good-bg: #ecf1e7;
+    --shadow-card: 0 1px 2px rgba(31,41,51,0.04), 0 8px 24px -16px rgba(31,41,51,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  button { font: inherit; color: inherit; }
+
+  /* ---------- header ---------- */
+  header {
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 22px 36px;
+  }
+  .header-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-logo { width: 42px; height: 42px; color: var(--accent); flex-shrink: 0; }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); line-height: 1.1; }
+  .brand-sub { font-size: 13px; color: var(--ink-faint); margin-top: 1px; }
+  .status { font-size: 13px; color: var(--ink-2); text-align: right; }
+  .status .status-product { color: var(--ink); font-weight: 600; }
+
+  /* ---------- layout ---------- */
+  main {
+    max-width: 1280px; margin: 0 auto;
+    padding: 32px 36px 80px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 36px;
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 20px 18px 60px; gap: 24px; }
+    header { padding: 16px 18px; }
+  }
+
+  .section-label {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--ink-faint); text-transform: uppercase; margin: 0 0 12px;
+  }
+
+  /* ---------- sidebar ---------- */
+  aside { position: sticky; top: 24px; align-self: start; }
+  .product-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 28px; }
+  .product-item {
+    text-align: left; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: var(--radius-sm);
+    padding: 12px 14px; cursor: pointer;
+    transition: background 100ms, border-color 100ms;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .product-item:hover { background: var(--surface-2); border-color: var(--ink-faint); }
+  .product-item.active { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+  .product-item.active .product-type { color: var(--surface); opacity: 0.75; }
+  .product-name { font-weight: 600; font-size: 14px; }
+  .product-type { font-size: 12px; color: var(--ink-faint); }
+
+  .scope-note {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius-sm);
+    padding: 14px; font-size: 13px; color: var(--ink-2); line-height: 1.5;
+  }
+
+  /* ---------- question list ---------- */
+  .question-list {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 24px;
+  }
+  .question-btn {
+    width: 100%; text-align: left;
+    background: transparent; border: none;
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 14px 18px; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    transition: background 80ms;
+  }
+  .question-btn:last-child { border-bottom: none; }
+  .question-btn:hover { background: var(--surface-2); }
+  .question-btn.active { background: var(--accent-bg); }
+  .question-btn.active .qlabel { color: var(--accent-strong); font-weight: 600; }
+  .qnum { font-family: ui-monospace, monospace; font-size: 11px; color: var(--ink-faint); min-width: 20px; flex-shrink: 0; }
+  .qlabel { flex: 1; font-size: 14.5px; color: var(--ink); }
+  .qstatus {
+    font-size: 11px; padding: 3px 9px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-faint);
+    white-space: nowrap; font-weight: 500;
+  }
+  .qstatus.ready     { background: var(--good-bg); color: var(--good); }
+  .qstatus.notapply  { background: var(--warn-bg); color: var(--warn); }
+  .qstatus.universal { background: var(--accent-bg); color: var(--accent-strong); }
+  .qstatus.empty     { opacity: 0.4; }
+
+  /* ---------- result ---------- */
+  .result {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: 28px; box-shadow: var(--shadow-card); min-height: 320px;
+  }
+  .empty-state {
+    color: var(--ink-faint); font-size: 15px;
+    padding: 60px 16px; text-align: center; line-height: 1.6;
+  }
+  .empty-state-icon {
+    width: 48px; height: 48px; margin: 0 auto 16px;
+    color: var(--ink-faint); opacity: 0.6;
+  }
+
+  .result-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1px solid var(--rule-soft); flex-wrap: wrap;
+  }
+  .result-head-text { display: flex; flex-direction: column; gap: 4px; }
+  .result-system { font-weight: 600; font-size: 15px; color: var(--ink); }
+  .result-question { font-size: 14px; color: var(--ink-2); }
+  .result-tag {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 5px 12px; border-radius: 999px;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .result-tag.snippet   { background: var(--good-bg); color: var(--good); }
+  .result-tag.notapply  { background: var(--warn-bg); color: var(--warn); }
+  .result-tag.universal { background: var(--accent-bg); color: var(--accent-strong); }
+
+  .snippet-frame {
+    background: var(--bg); border: 1px solid var(--rule); border-radius: var(--radius-sm);
+    padding: 12px; overflow: auto;
+  }
+  .snippet-frame img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  .snippet-caption { font-size: 12.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.5; }
+  .sheet-pill {
+    display: inline-block; font-family: ui-monospace, monospace; font-size: 12px;
+    padding: 2px 8px; background: var(--surface-2); border-radius: 4px;
+    color: var(--ink-2); margin: 0 3px;
+  }
+
+  .text-answer { padding: 18px 0 6px; font-size: 16px; line-height: 1.6; }
+  .text-answer .primary { color: var(--ink); }
+  .text-answer .secondary { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+  .text-answer.deflection .primary { color: var(--warn); }
+
+  .placeholder { padding: 8px 0; }
+  .placeholder-title { font-weight: 600; font-size: 15px; color: var(--ink-2); margin: 0 0 6px; }
+  .placeholder-body { font-size: 14px; color: var(--ink-faint); margin-bottom: 22px; line-height: 1.55; }
+  .scenario-suggestions {
+    background: var(--surface-2); border-radius: var(--radius-sm);
+    padding: 16px 18px;
+  }
+  .scenario-suggestions h4 {
+    font-size: 12px; font-weight: 600; margin: 0 0 10px;
+    color: var(--ink-2); letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  .scenario-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+  .scenario-link {
+    background: transparent; border: none; text-align: left; cursor: pointer;
+    padding: 7px 0; font-size: 14px; color: var(--ink);
+    transition: color 80ms;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .scenario-link:hover { color: var(--accent); }
+  .scenario-link:hover .scenario-arrow { transform: translateX(3px); }
+  .scenario-product { font-weight: 600; color: var(--accent-strong); min-width: 160px; }
+  .scenario-arrow { color: var(--ink-faint); transition: transform 100ms; }
+
+  footer { border-top: 1px solid var(--rule); padding: 18px 36px; background: var(--surface); }
+  .footer-inner {
+    max-width: 1280px; margin: 0 auto;
+    font-size: 12px; color: var(--ink-faint);
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2"/>
+        <line x1="32" y1="6"  x2="32" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="32" y1="52" x2="32" y2="58" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="6"  y1="32" x2="12" y2="32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="52" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M32 14 L38 32 L32 30 L26 32 Z" fill="currentColor"/>
+        <path d="M32 50 L38 32 L32 34 L26 32 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        <circle cx="32" cy="32" r="2.2" fill="currentColor"/>
+      </svg>
+      <div class="brand-text">
+        <div class="brand-title">DocNavigator</div>
+        <div class="brand-sub">Find the right detail in a reference drawing</div>
+      </div>
+    </div>
+    <div class="status" id="status">Pick a system and a question →</div>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <p class="section-label">System</p>
+    <div class="product-list" id="product-list"></div>
+
+    <p class="section-label">About this preview</p>
+    <div class="scope-note">
+      This preview includes <strong>10 example questions</strong> across the systems listed. Other combinations show a placeholder — adding them later is a small change.
+    </div>
+  </aside>
+
+  <section>
+    <p class="section-label">Question</p>
+    <div class="question-list" id="question-list"></div>
+
+    <p class="section-label">Answer</p>
+    <div class="result" id="result"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>DocNavigator · static preview · no network calls after page load</div>
+    <div>Reference material only · verify with your project lead before construction</div>
+  </div>
+</footer>
+
+<script>
+const PRODUCTS = [
+  { id: "naeotom_alpha", name: "NAEOTOM Alpha",       type: "CT · photon-counting" },
+  { id: "somatom_gotop", name: "SOMATOM GO.TOP",      type: "CT" },
+  { id: "artis_zee_mp",  name: "ARTIS Zee MP",        type: "Angiography" },
+  { id: "icono_biplane", name: "ARTIS ICONO Biplane", type: "Angiography · biplane" },
+  { id: "luminos_agile", name: "LUMINOS Agile",       type: "Radiography & fluoroscopy" },
+  { id: "ysio_xpree",    name: "YSIO XPree Gen2",     type: "Digital radiography" },
+  { id: "magnetom_sola", name: "MAGNETOM Sola",       type: "MRI · 1.5T" },
+  { id: "magnetom_flow", name: "MAGNETOM Flow.NEO",   type: "MRI" }
+];
+
+const QUESTIONS = [
+  { id: "floor_levelness",    label: "What is the floor levelness requirement?" },
+  { id: "breaker_size",       label: "What size breaker is needed?" },
+  { id: "ceiling_height",     label: "What is the ceiling height requirement?" },
+  { id: "for_construction",   label: "Can we use these drawings for construction?" },
+  { id: "equipment_weight",   label: "How much does the equipment weigh?" },
+  { id: "wiring_size",        label: "What size wiring do I need?" },
+  { id: "xray_light",         label: "How does an X-ray-in-use light get connected?" },
+  { id: "environmental",      label: "What are the environmental requirements?" },
+  { id: "unistrut_levelness", label: "What is the levelness requirement of the unistrut?" },
+  { id: "epo_connection",     label: "How do the EPOs connect?" }
+];
+
+const UNIVERSAL_FOR_CONSTRUCTION = {
+  type: "universal",
+  primary: "No — these are reference drawings only and not for construction.",
+  secondary: "They show equipment requirements but are subject to design modifications and verification. Construction work should follow a site-specific design produced by the architectural and engineering firm of record."
+};
+
+const SNIPPETS = {
+  "somatom_gotop|floor_levelness":    { image: "data/crops/somatom_gotop/floor_levelness.png",    sheet: "S-101", page: 2 },
+  "naeotom_alpha|breaker_size":       { image: "data/crops/naeotom_alpha/breaker_size.png",       sheet: "E-102", page: 7 },
+  "luminos_agile|ceiling_height":     { image: "data/crops/luminos_agile/ceiling_height.png",     sheet: "A-101", page: 2 },
+  "magnetom_sola|equipment_weight":   { image: "data/crops/magnetom_sola/equipment_weight.png",   sheet: "A-101", page: 1 },
+  "ysio_xpree|wiring_size":           { image: "data/crops/ysio_xpree/wiring_size.png",           sheet: "E-102", page: 5 },
+  "icono_biplane|xray_light":         { image: "data/crops/icono_biplane/xray_light.png",         sheet: "E-501", page: 7 },
+  "luminos_agile|environmental":      { image: "data/crops/luminos_agile/environmental.png",      sheet: "A-101", page: 2 },
+  "artis_zee_mp|unistrut_levelness":  { image: "data/crops/artis_zee_mp/unistrut_levelness.png",  sheet: "S-102", page: 4 },
+  "magnetom_sola|epo_connection":     { image: "data/crops/magnetom_sola/epo_connection.png",     sheet: "E-102", page: 8 }
+};
+
+const DEFLECTIONS = {
+  "naeotom_alpha|unistrut_levelness": "This system is floor-mounted and does not use a unistrut ceiling support.",
+  "somatom_gotop|unistrut_levelness": "This system is floor-mounted and does not use a unistrut ceiling support.",
+  "ysio_xpree|unistrut_levelness":    "The overhead tube stand for this system has its levelness specified in the structural ceiling plan rather than as a unistrut requirement.",
+  "artis_zee_mp|floor_levelness":     "This system is ceiling-mounted — structural specifications use the unistrut levelness requirement instead of a floor levelness.",
+  "artis_zee_mp|environmental":       "Environmental requirements are not specified on this reference drawing set.",
+  "icono_biplane|environmental":      "Environmental requirements are not specified on this reference drawing set.",
+  "magnetom_sola|floor_levelness":    "MR systems use a vibration specification rather than a traditional floor levelness.",
+  "magnetom_sola|xray_light":         "MR systems do not require an X-ray-in-use warning light.",
+  "magnetom_sola|unistrut_levelness": "This system does not use unistrut ceiling supports.",
+  "magnetom_flow|floor_levelness":    "MR systems use a vibration specification rather than a traditional floor levelness.",
+  "magnetom_flow|xray_light":         "MR systems do not require an X-ray-in-use warning light.",
+  "magnetom_flow|unistrut_levelness": "This system does not use unistrut ceiling supports."
+};
+
+let currentProductId = PRODUCTS[0].id;
+let currentQuestionId = null;
+
+function answerFor(productId, questionId) {
+  if (questionId === "for_construction") return UNIVERSAL_FOR_CONSTRUCTION;
+  const key = productId + "|" + questionId;
+  if (SNIPPETS[key])    return Object.assign({ type: "snippet" }, SNIPPETS[key]);
+  if (DEFLECTIONS[key]) return { type: "deflection", text: DEFLECTIONS[key] };
+  return { type: "placeholder" };
+}
+
+function questionStatus(productId, questionId) {
+  if (questionId === "for_construction") return { label: "Same for all", className: "universal" };
+  const key = productId + "|" + questionId;
+  if (SNIPPETS[key])    return { label: "Has answer", className: "ready" };
+  if (DEFLECTIONS[key]) return { label: "Doesn't apply", className: "notapply" };
+  return { label: "Not in preview", className: "empty" };
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function renderProducts() {
+  const root = document.getElementById("product-list");
+  root.innerHTML = "";
+  PRODUCTS.forEach(p => {
+    const btn = document.createElement("button");
+    btn.className = "product-item" + (p.id === currentProductId ? " active" : "");
+    btn.innerHTML = '<span class="product-name"></span><span class="product-type"></span>';
+    btn.querySelector(".product-name").textContent = p.name;
+    btn.querySelector(".product-type").textContent = p.type;
+    btn.addEventListener("click", () => { currentProductId = p.id; renderAll(); });
+    root.appendChild(btn);
+  });
+}
+
+function renderQuestions() {
+  const root = document.getElementById("question-list");
+  root.innerHTML = "";
+  QUESTIONS.forEach((q, i) => {
+    const status = questionStatus(currentProductId, q.id);
+    const btn = document.createElement("button");
+    btn.className = "question-btn" + (q.id === currentQuestionId ? " active" : "");
+    btn.innerHTML = '<span class="qnum">' + String(i+1).padStart(2,"0") + '</span><span class="qlabel"></span><span class="qstatus ' + status.className + '"></span>';
+    btn.querySelector(".qlabel").textContent = q.label;
+    btn.querySelector(".qstatus").textContent = status.label;
+    btn.addEventListener("click", () => { currentQuestionId = q.id; renderAll(); });
+    root.appendChild(btn);
+  });
+}
+
+function renderResult() {
+  const root = document.getElementById("result");
+  if (!currentQuestionId) {
+    root.innerHTML = '<div class="empty-state"><svg class="empty-state-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="24"/><path d="M32 18 L38 32 L32 30 L26 32 Z" fill="currentColor"/><path d="M32 46 L38 32 L32 34 L26 32 Z"/></svg>Pick a system on the left, then a question above.<br>The relevant detail from the drawing will appear here.</div>';
+    return;
+  }
+  const product = PRODUCTS.find(p => p.id === currentProductId);
+  const question = QUESTIONS.find(q => q.id === currentQuestionId);
+  const answer = answerFor(currentProductId, currentQuestionId);
+
+  function headHtml(tagClass, tagLabel) {
+    return '<div class="result-head"><div class="result-head-text">' +
+           '<div class="result-system">' + escapeHtml(product.name) + '</div>' +
+           '<div class="result-question">' + escapeHtml(question.label) + '</div>' +
+           '</div><div class="result-tag ' + tagClass + '">' + tagLabel + '</div></div>';
+  }
+
+  if (answer.type === "snippet") {
+    root.innerHTML = headHtml("snippet", "From the drawing") +
+      '<div class="snippet-frame"><img src="' + escapeHtml(answer.image) +
+      '" alt="Detail from sheet ' + escapeHtml(answer.sheet) +
+      ', page ' + answer.page + ' of the ' + escapeHtml(product.name) + ' drawing"></div>' +
+      '<div class="snippet-caption">Shown from sheet <span class="sheet-pill">' + escapeHtml(answer.sheet) +
+      '</span> page <span class="sheet-pill">' + answer.page +
+      '</span> of the ' + escapeHtml(product.name) + ' drawing set.</div>';
+  } else if (answer.type === "deflection") {
+    root.innerHTML = headHtml("notapply", "Doesn't apply") +
+      '<div class="text-answer deflection"><div class="primary">' + escapeHtml(answer.text) +
+      '</div><div class="secondary">If you still need guidance on this, talk to your project lead.</div></div>';
+  } else if (answer.type === "universal") {
+    root.innerHTML = headHtml("universal", "Same for every system") +
+      '<div class="text-answer"><div class="primary">' + escapeHtml(answer.primary) +
+      '</div><div class="secondary">' + escapeHtml(answer.secondary) + '</div></div>';
+  } else {
+    const available = Object.keys(SNIPPETS).map(k => {
+      const parts = k.split("|");
+      return { pid: parts[0], qid: parts[1], product: PRODUCTS.find(p => p.id === parts[0]), question: QUESTIONS.find(q => q.id === parts[1]) };
+    });
+    const items = available.map(s => {
+      return '<li><button class="scenario-link" data-product="' + s.pid + '" data-question="' + s.qid + '">' +
+             '<span class="scenario-product">' + escapeHtml(s.product.name) + '</span>' +
+             '<span>' + escapeHtml(s.question.label) + '</span>' +
+             '<span class="scenario-arrow">→</span></button></li>';
+    }).join("");
+    root.innerHTML =
+      '<div class="placeholder">' +
+      '<div class="placeholder-title">This question isn\'t in the preview yet</div>' +
+      '<div class="placeholder-body">The structure is in place — adding this question is a quick update once the relevant area of the drawing is selected. In the meantime, try one of the example questions below.</div>' +
+      '<div class="scenario-suggestions"><h4>Try one of these</h4><ul class="scenario-list">' + items + '</ul></div>' +
+      '</div>';
+    root.querySelectorAll(".scenario-link").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentProductId = btn.dataset.product;
+        currentQuestionId = btn.dataset.question;
+        renderAll();
+      });
+    });
+  }
+}
+
+function renderStatus() {
+  const product = PRODUCTS.find(p => p.id === currentProductId);
+  const question = currentQuestionId ? QUESTIONS.find(q => q.id === currentQuestionId) : null;
+  const el = document.getElementById("status");
+  if (question) {
+    el.innerHTML = '<span class="status-product">' + escapeHtml(product.name) + '</span> · ' + escapeHtml(question.label);
+  } else {
+    el.innerHTML = '<span class="status-product">' + escapeHtml(product.name) + '</span> · pick a question →';
+  }
+}
+
+function renderAll() {
+  renderProducts();
+  renderQuestions();
+  renderResult();
+  renderStatus();
+}
+
+renderAll();
+</script>
+</body>
+</html>
